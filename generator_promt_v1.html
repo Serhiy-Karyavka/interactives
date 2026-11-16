@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Універсальний генератор AI-промтів для вчителя інформатики</title>
+<style>
+:root{
+  --bg:#124E78; --card:#0D3856; --cta:#E4572E; --accent:#F2BB05;
+  --input:#0A2B42; --term:#082032; --text:#FFFFFF; --muted:#B9D3E6;
+  --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", Menlo, "Courier New", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5;min-height:100vh}
+header{padding:20px 20px 0;max-width:1500px;margin:0 auto}
+h1{font-size:clamp(1.2rem,2.4vw,1.8rem);margin:0 0 4px;display:flex;gap:10px;align-items:center}
+h1 svg{flex:none}
+.sub{color:var(--muted);margin:0 0 14px;font-size:.95rem}
+.progress-wrap{background:var(--card);border:1px solid rgba(242,187,5,.35);border-radius:12px;padding:10px 14px}
+.progress-top{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin-bottom:6px}
+.progress-top b{color:var(--accent);font-family:var(--mono)}
+.bar{height:8px;background:var(--input);border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;width:0;background:var(--accent);box-shadow:0 0 10px rgba(242,187,5,.7);transition:width .35s ease}
+main{max-width:1500px;margin:0 auto;padding:16px 20px 30px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:980px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid rgba(242,187,5,.18);border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:1.05rem;display:flex;gap:10px;align-items:center}
+.step{font-family:var(--mono);background:var(--accent);color:#0A2B42;border-radius:6px;padding:1px 8px;font-size:.8rem;font-weight:700}
+label.lbl{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 5px}
+.req{color:var(--accent)}
+input[type=text],select,textarea{width:100%;background:var(--input);color:#fff;border:1.5px solid var(--accent);border-radius:9px;padding:10px 12px;font:inherit;outline:none;transition:box-shadow .2s,border-color .2s}
+input::placeholder{color:#7f9db3}
+input:focus,select:focus,textarea:focus{box-shadow:0 0 0 3px rgba(242,187,5,.3),0 0 14px rgba(242,187,5,.45)}
+select option{background:#0A2B42;color:#fff}
+.row{display:flex;gap:8px}
+.row input{flex:1}
+.btn{border:0;border-radius:10px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;color:#fff;display:inline-flex;align-items:center;gap:8px;justify-content:center;transition:transform .15s,background .2s,box-shadow .2s}
+.btn:active{transform:translateY(1px)}
+.btn-cta{background:var(--cta)}
+.btn-cta:hover{background:#f06a42;box-shadow:0 4px 18px rgba(228,87,46,.5)}
+.btn-big{padding:14px 20px;font-size:1.05rem;width:100%}
+.btn-ghost{background:transparent;border:1.5px solid var(--accent);color:var(--accent)}
+.btn-ghost:hover{background:rgba(242,187,5,.12)}
+.btn-ex{background:var(--input);border:1.5px dashed var(--accent);color:var(--accent);white-space:nowrap}
+.btn-ex:hover{background:rgba(242,187,5,.12)}
+.btn.ok{background:#2e9e5b!important;box-shadow:none}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice{position:relative;cursor:pointer;display:block}
+.choice input{position:absolute;opacity:0;pointer-events:none}
+.choice span{display:flex;align-items:center;gap:10px;background:var(--input);border:1.5px solid rgba(255,255,255,.18);border-radius:10px;padding:10px 12px;transition:.2s;font-size:.93rem;height:100%}
+.choice span::before{content:"";flex:none;width:16px;height:16px;border-radius:50%;border:2px solid var(--muted);transition:.2s}
+.choice.cb span::before{border-radius:4px}
+.choice:hover span{border-color:rgba(242,187,5,.6)}
+.choice input:checked+span{border-color:var(--accent);box-shadow:0 0 12px rgba(242,187,5,.35);background:rgba(242,187,5,.08)}
+.choice input:checked+span::before{background:var(--accent);border-color:var(--accent);box-shadow:inset 0 0 0 3px var(--input)}
+.choice input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tags .choice span{border-radius:99px;padding:7px 14px;font-size:.88rem}
+.tags .choice span::before{width:12px;height:12px}
+.hint{margin-top:8px;font-size:.85rem;color:var(--muted);background:var(--input);border-left:3px solid var(--accent);border-radius:6px;padding:8px 10px;min-height:38px}
+.err{display:none;color:var(--cta);font-size:.85rem;margin-top:6px;font-weight:600}
+.invalid{border-color:var(--cta)!important;box-shadow:0 0 0 3px rgba(228,87,46,.35)!important;animation:shake .45s}
+.invalid~.err,.err.show{display:block}
+@keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+.right{position:sticky;top:12px}
+@media(max-width:980px){.right{position:static}}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.actions .btn-big{grid-column:1/-1}
+.status{margin-top:10px;font-size:.88rem;min-height:22px;color:var(--muted)}
+.status.warn{color:var(--accent)}
+.status.good{color:#7fe3a5}
+.terminal{background:var(--term);border:1px solid var(--accent);border-radius:12px;overflow:hidden;box-shadow:0 0 22px rgba(242,187,5,.12)}
+.term-head{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid rgba(242,187,5,.3);font-family:var(--mono);font-size:.78rem;color:var(--muted);flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:#555}
+.dot.on{background:#3ddc84;box-shadow:0 0 8px #3ddc84}
+.badge{margin-left:auto;color:var(--accent)}
+textarea#out{background:var(--term);border:0;border-radius:0;box-shadow:none!important;font-family:var(--mono);font-size:.82rem;line-height:1.55;min-height:420px;height:56vh;resize:vertical;color:#e8f1f8}
+.exports{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+@media(max-width:480px){.cards,.actions,.exports{grid-template-columns:1fr}}
+footer{text-align:center;color:var(--muted);font-size:.8rem;padding:0 20px 24px}
+</style>
+</head>
+<body>
+<header>
+  <h1>
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F2BB05" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+    Універсальний генератор AI-промтів для вчителя інформатики
+  </h1>
+  <p class="sub">Зберіть професійний промт як конструктор — скопіюйте в 1 клік і вставте в ChatGPT, Claude чи Gemini.</p>
+  <div class="progress-wrap" aria-live="polite">
+    <div class="progress-top"><span>Деталізація промту</span><b id="pct">0%</b></div>
+    <div class="bar"><i id="bar"></i></div>
+  </div>
+</header>
+
+<main>
+  <section id="builder">
+    <div class="card">
+      <h2><span class="step">01</span> Базовий контекст уроку</h2>
+      <label class="lbl" for="topic">Тема уроку <span class="req">*</span></label>
+      <div class="row">
+        <input type="text" id="topic" placeholder="Наприклад: Цикли з лічильником у Python" autocomplete="off">
+        <button type="button" class="btn btn-ex" id="exBtn" title="Підставити приклад теми">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Приклад
+        </button>
+      </div>
+      <div class="err" id="topicErr">Вкажіть тему уроку — без неї промт буде надто загальним.</div>
+
+      <label class="lbl" for="grade">Клас / Вікова група</label>
+      <select id="grade"></select>
+
+      <label class="lbl" for="env">Середовище / Інструмент уроку</label>
+      <select id="env"></select>
+
+      <label class="lbl">Формат проведення</label>
+      <div class="cards" id="formatBox"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">02</span> Педагогічна стратегія</h2>
+      <label class="lbl" for="ltype">Тип уроку за метою</label>
+      <select id="ltype"></select>
+      <label class="lbl" for="fw">Педагогічний фреймворк</label>
+      <select id="fw"></select>
+      <div class="hint" id="fwHint">Оберіть фреймворк — тут з'явиться короткий опис його етапів.</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">03</span> Обов'язкові модулі уроку</h2>
+      <div class="tags" id="modulesBox"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step">04</span> Цільовий результат</h2>
+      <div class="cards" id="outputsBox" style="grid-template-columns:1fr"></div>
+    </div>
+  </section>
+
+  <aside class="right">
+    <div class="card">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F2BB05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8M12 8v8"/></svg>
+        Панель керування
+      </h2>
+      <div class="actions">
+        <button type="button" class="btn btn-cta btn-big" id="genBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 17l.7 1.8L21.5 19.5l-1.8.7L19 22l-.7-1.8-1.8-.7 1.8-.7z"/></svg>
+          Згенерувати промт
+        </button>
+        <button type="button" class="btn btn-ghost" id="checkBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Перевірити параметри
+        </button>
+        <button type="button" class="btn btn-ghost" id="resetBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>Скинути (Reset)
+        </button>
+      </div>
+      <div class="status" id="status" role="status"></div>
+    </div>
+
+    <div class="terminal">
+      <div class="term-head">
+        <span class="dot" id="dot"></span><span>prompt.md</span>
+        <span class="badge" id="badge">Довжина промту: 0 символів | 0 слів</span>
+      </div>
+      <textarea id="out" spellcheck="false" placeholder="// Тут з'явиться готовий промт. Ви зможете відредагувати його перед копіюванням..."></textarea>
+    </div>
+    <div class="exports">
+      <button type="button" class="btn btn-cta" id="copyBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+        <span id="copyTxt">Скопіювати промт</span>
+      </button>
+      <button type="button" class="btn btn-ghost" id="saveBtn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Зберегти у .txt
+      </button>
+    </div>
+  </aside>
+</main>
+<footer>Працює локально, без інтернету. Додаток формує промт — сам контент уроку створює обрана вами нейромережа.</footer>
+
+<script>
+"use strict";
+/* ============ ДОВІДНИКИ ============ */
+const PROMPT_DICTIONARY = {
+  grades: {
+    g5:{label:"5 клас НУШ",age:"10–11 років",level:"початківці, перше знайомство з предметом; потрібні короткі речення, наочність, ігрові елементи"},
+    g6:{label:"6 клас НУШ",age:"11–12 років",level:"базові цифрові навички; поступове введення термінів із поясненням"},
+    g7:{label:"7 клас НУШ",age:"12–13 років",level:"готові до алгоритмічного мислення та простих програм; увага ~15 хв на один вид діяльності"},
+    g8:{label:"8 клас НУШ",age:"13–14 років",level:"можуть працювати з абстракціями, змінними та умовами; цінують практичну значущість"},
+    g9:{label:"9 клас НУШ",age:"14–15 років",level:"здатні до самостійного аналізу й міні-проєктів; готуються до вибору профілю"},
+    g10:{label:"10 клас (стандарт)",age:"15–16 років",level:"мотивовані прикладним змістом; здатні до системного мислення"},
+    g11:{label:"11 клас (стандарт)",age:"16–17 років",level:"орієнтовані на майбутню професію та підсумкове оцінювання; вміють працювати самостійно"},
+    g1011:{label:"10-11 класи (профільний рівень)",age:"15–17 років",level:"поглиблена підготовка; очікується формальна строгість, складніші алгоритми, елементи олімпіадного рівня"}
+  },
+  envs:{
+    none:{label:"Без прив'язки до ПЗ / Теорія",rule:"Урок теоретичний, без прив'язки до конкретного програмного забезпечення. Використовуй аналогії, схеми, діалоги, «безкомп'ютерні» (unplugged) активності.",expert:"методист з інформатики"},
+    scratch:{label:"Scratch",rule:"Усі практичні завдання виконуються у Scratch 3. Описуй блоки за їхніми назвами та категоріями (кольорами), пропонуй ідеї спрайтів, сцен і подій.",expert:"вчитель інформатики, що спеціалізується на візуальному програмуванні у Scratch"},
+    python:{label:"Python",rule:"Усі приклади коду пиши мовою Python 3. Дотримуйся PEP 8, давай осмислені імена змінних, коментарі українською. Код має бути готовим до запуску без змін.",expert:"вчитель інформатики та розробник на Python"},
+    web:{label:"HTML/CSS/JS",rule:"Усі приклади пиши на сучасних HTML5, CSS3 та Vanilla JavaScript без зовнішніх бібліотек, щоб код працював після відкриття файлу в браузері.",expert:"вчитель інформатики та фронтенд-розробник"},
+    office:{label:"Текстовий/Табличний процесор (Word/Excel/Google)",rule:"Практичні завдання виконуються в офісних застосунках (Word, Excel, Google Docs/Sheets). Називай конкретні команди меню/стрічки та приклади формул, вказуючи, що вони однакові або відрізняються в різних застосунках.",expert:"вчитель інформатики, експерт з офісних технологій"},
+    graphic:{label:"Графічний/3D редактор (Blender/Canva)",rule:"Практика виконується в графічному або 3D-редакторі (Blender/Canva). Описуй інструменти й гарячі клавіші, пропонуй творчі підзавдання з чіткими критеріями результату.",expert:"вчитель інформатики та спеціаліст із цифрового дизайну"},
+    cyber:{label:"Кібербезпека та цифрова грамотність",rule:"Тема стосується безпеки в мережі та цифрової грамотності. Використовуй реальні (але безпечні) кейси, не давай інструкцій, що можуть бути використані для шкоди; роби акцент на захисті, критичному мисленні та етичній поведінці онлайн.",expert:"вчитель інформатики та фахівець із цифрової безпеки"}
+  },
+  formats:{
+    offline:{label:"Очний урок у класі",rule:"Урок проходить очно в комп'ютерному класі: передбач парну/групову роботу, переміщення, роботу з дошкою та підказки для вчителя, що ходить по класу."},
+    online:{label:"Дистанційний / Онлайн-урок",rule:"Урок проходить онлайн (відеозв'язок + спільні документи/платформи): передбач дії в чаті, демонстрацію екрана, роботу в кімнатах-групах, інструменти для швидкого зворотного зв'язку, запасні варіанти на випадок технічних збоїв."}
+  },
+  lessonTypes:{
+    new:"Засвоєння нових знань",
+    skills:"Формування практичних умінь",
+    review:"Узагальнення та систематизація",
+    control:"Контроль знань",
+    combined:"Комбінований урок"
+  },
+  frameworks:{
+    classic:{label:"Класичний український урок",hint:"Актуалізація → Пояснення → Практика → Підсумки. Знайома структура, що легко вписується у 45 хвилин.",steps:["Організаційний момент та мотивація","Актуалізація опорних знань","Пояснення нового матеріалу","Закріплення / практична робота","Підсумки уроку та домашнє завдання"]},
+    e5:{label:"Модель 5E",hint:"Engage, Explore, Explain, Elaborate, Evaluate — від цікавого гачка через самостійне дослідження до оцінювання.",steps:["Engage — зацікав учнів проблемою або запитанням","Explore — учні самостійно досліджують, пробують, помиляються","Explain — формалізація понять на основі їхнього досвіду","Elaborate — застосування знань у новому контексті","Evaluate — перевірка розуміння та рефлексія"]},
+    primm:{label:"Методика PRIMM",hint:"Predict, Run, Investigate, Modify, Make — ідеально для кодингу: від прогнозу результату до створення власної програми.",steps:["Predict — учні прогнозують, що зробить готовий фрагмент коду","Run — запускають код і порівнюють з прогнозом","Investigate — пояснюють, як працює кожен рядок","Modify — змінюють код за завданнями зростаючої складності","Make — створюють власну програму за аналогією"]},
+    flipped:{label:"Перевернутий клас (Flipped Classroom)",hint:"Теорію учні опрацьовують вдома, а урок присвячено практиці, обговоренню та розв'язанню проблем.",steps:["Матеріали для самостійного опрацювання до уроку (коротке відео/текст + запитання для самоперевірки)","Швидка перевірка розуміння на початку уроку","Основна частина — практика, парна й групова робота під супроводом вчителя","Розбір типових помилок","Рефлексія та план наступного кроку"]},
+    pbl:{label:"Проєктне навчання (PBL)",hint:"Учні працюють над реальним проєктом із проблемним запитанням, командами та публічним представленням результату.",steps:["Проблемне запитання та мета проєкту","Планування, розподіл ролей у команді","Дослідження та створення продукту","Презентація результату","Взаємооцінювання та рефлексія"]}
+  },
+  modules:{
+    warmup:{label:"Гейміфікована розминка / Криголам (до 5 хв)",rule:"Додай гейміфіковану розминку (до 5 хвилин), пов'язану з темою: коротка гра, загадка або челендж із чіткими правилами."},
+    actualize:{label:"Актуалізація опорних знань (бліц-опитування)",rule:"Додай бліц-опитування (5–7 коротких запитань) для актуалізації опорних знань, потрібних для цієї теми, із відповідями для вчителя."},
+    case:{label:"Проблемна ситуація з реального життя (Case Study)",rule:"Запропонуй проблемну ситуацію з реального життя (case study), близьку до досвіду учнів цього віку, яка природно підводить до теми уроку та закінчується відкритим запитанням."},
+    algo:{label:"Покроковий алгоритм для практичної роботи",rule:"Підготуй покроковий алгоритм практичної роботи: нумеровані кроки, кожен — одна чітка дія; позначай контрольні точки, де учень перевіряє проміжний результат."},
+    diff:{label:"Диференційовані завдання (3 рівні складності)",rule:"Розділи практичні завдання на 3 рівні складності за Таксономією Блума: Початковий (відтворення), Достатній (застосування), Високий (створення/аналіз). Для кожного рівня наведи щонайменше 2 завдання."},
+    ct:{label:"Вправа на обчислювальне мислення (декомпозиція/алгоритмізація)",rule:"Включи вправу на обчислювальне мислення: декомпозиція задачі, пошук закономірностей, абстрагування та складання алгоритму. Вкажи, який саме компонент тренується."},
+    eyes:{label:"Гімнастика для очей / фізкультхвилинка (згідно з санітарними нормами)",rule:"Додай гімнастику для очей та коротку фізкультхвилинку (1–2 хв) відповідно до санітарних норм роботи з екраном, із чітким описом вправ."},
+    reflect:{label:"Інтерактивна рефлексія в кінці уроку",rule:"Заверши урок інтерактивною рефлексією (3–5 хв): запропонуй 1–2 прийоми (наприклад, «світлофор», «3-2-1», екзит-тікет) та конкретні запитання."},
+    rubric:{label:"Критерії оцінювання (рубрикатор для учнів)",rule:"Створи рубрикатор критеріїв оцінювання у вигляді таблиці з рівнями досягнень, сформульований зрозумілою для учнів мовою."}
+  },
+  outputs:{
+    plan:{label:"Детальний план-конспект уроку для вчителя (з таймінгом на 45 хв)",rule:"Детальний план-конспект уроку для вчителя з розбивкою за хвилинами (загалом 45 хвилин), із діями вчителя й учнів на кожному етапі."},
+    cheat:{label:"Стислий опорний конспект / шпаргалка для учня",rule:"Стислий опорний конспект-шпаргалка для учня (не більше 1 сторінки): ключові терміни, правила, приклади."},
+    extended:{label:"Розширений навчальний матеріал з простими аналогіями",rule:"Розширений навчальний матеріал, у якому складні поняття пояснено через прості аналогії з повсякденного життя учнів."},
+    card:{label:"Інструкційна картка для практичної / лабораторної роботи",rule:"Інструкційна картка для практичної/лабораторної роботи: мета, обладнання/ПЗ, хід роботи, очікуваний результат, контрольні запитання."},
+    tasks:{label:"Набір тестових і практичних завдань (із ключами відповідей)",rule:"Набір тестових і практичних завдань з ключами відповідей та короткими поясненнями правильних відповідей."},
+    slides:{label:"Структура та тези для презентації (по слайдах)",rule:"Структура презентації по слайдах: заголовок, 2–4 тези та підказка щодо візуального оформлення для кожного слайда."}
+  },
+  guardrails:[
+    "Пиши по суті: без вступів, компліментів і «води».",
+    "Дотримуйся чинної програми НУШ з інформатики та віку учнів; не виходь за межі їхніх можливостей без явної потреби.",
+    "Увесь програмний код ОБОВ'ЯЗКОВО перевір на синтаксичні й логічні помилки до видачі відповіді, а очікуваний результат виконання вкажи окремо.",
+    "Не вигадуй факти, посилання та назви ресурсів. Якщо в чомусь не впевнений — прямо зазнач це.",
+    "Відповідай українською мовою, термінологія — відповідно до шкільних підручників.",
+    "Якщо бракує даних для якісної відповіді — спершу постав мені до 3 уточнювальних запитань, потім виконуй завдання."
+  ],
+  example:"Цикли з лічильником у Python"
+};
+
+/* ============ ДВИГУН ГЕНЕРАЦІЇ ============ */
+const PromptEngine = {
+  list(arr){return arr.map((s,i)=>`${i+1}. ${s}`).join("\n");},
+  bullets(arr){return arr.map(s=>`* ${s}`).join("\n");},
+  build(state){
+    const D = PROMPT_DICTIONARY;
+    const g = D.grades[state.grade];
+    const e = D.envs[state.env];
+    const f = D.formats[state.format];
+    const fw = D.frameworks[state.fw];
+    const lt = D.lessonTypes[state.ltype];
+    const modules = state.modules.map(k=>D.modules[k]);
+    const outputs = state.outputs.map(k=>D.outputs[k]);
+    const topic = state.topic.trim();
+    const L = [];
+
+    // РОЛЬ
+    const expert = e ? e.expert : "вчитель-методист з інформатики";
+    const aud = g ? `учнів ${g.label.toLowerCase()} (${g.age})` : "учнів закладу загальної середньої освіти";
+    L.push("# РОЛЬ");
+    L.push(`Ти — досвідчений ${expert} та автор методичних матеріалів з понад 15-річним стажем. Ти створюєш матеріали для ${aud} і чудово розумієш, як пояснювати складні речі просто.`);
+    L.push("");
+
+    // КОНТЕКСТ
+    L.push("# КОНТЕКСТ");
+    L.push(`Мені, вчителю інформатики, потрібна допомога в підготовці уроку на тему: **«${topic}»**.`);
+    const ctx = [];
+    if(g) ctx.push(`**Аудиторія:** ${g.label}, ${g.age}. Особливості: ${g.level}.`);
+    if(lt) ctx.push(`**Тип уроку за метою:** ${lt}.`);
+    if(f) ctx.push(`**Формат проведення:** ${f.label}. ${f.rule}`);
+    if(e) ctx.push(`**Середовище / інструмент:** ${e.label}. ${e.rule}`);
+    ctx.push("**Тривалість:** 45 хвилин.");
+    L.push(this.bullets(ctx));
+    L.push("");
+
+    // ПЕДАГОГІЧНА РАМКА
+    if(fw){
+      L.push("# ПЕДАГОГІЧНА РАМКА");
+      L.push(`Побудуй урок за підходом **«${fw.label}»**. Чітко позначай у тексті кожен етап і розподіляй час між ними так, щоб загалом вийшло 45 хвилин:`);
+      L.push(this.list(fw.steps));
+      L.push("");
+    }
+
+    // ЗАВДАННЯ
+    L.push("# ЗАВДАННЯ");
+    if(outputs.length){
+      L.push("Підготуй такі матеріали (у зазначеному порядку, кожен під окремим заголовком `##`):");
+      L.push(this.list(outputs.map(o=>o.rule)));
+    } else {
+      L.push("Підготуй повний комплект матеріалів для проведення цього уроку, структурувавши відповідь за заголовками `##`.");
+    }
+    L.push("");
+
+    // ОБОВ'ЯЗКОВІ МОДУЛІ
+    if(modules.length){
+      L.push("## Обов'язкові складники уроку");
+      L.push("Обов'язково інтегруй у структуру уроку (у відповідні етапи педагогічної рамки):");
+      L.push(this.bullets(modules.map(m=>m.rule)));
+      L.push("");
+    }
+
+    // ПОКРОКОВІ ІНСТРУКЦІЇ
+    L.push("# ПОКРОКОВІ ІНСТРУКЦІЇ ДЛЯ ТЕБЕ");
+    L.push(this.list([
+      `Проаналізуй тему «${topic}» і визнач 3–5 ключових понять, які учні мають засвоїти.`,
+      "Сформулюй конкретні, вимірювані цілі уроку (що учень знатиме й умітиме після уроку).",
+      "Розплануй урок за обраною педагогічною рамкою з орієнтовним таймінгом.",
+      "Підготуй усі запитані матеріали, узгоджуючи складність і мову з віком учнів.",
+      "Наприкінці зроби самоперевірку: чи виконано всі пункти, чи є помилки в коді та чи вкладається урок у 45 хвилин."
+    ]));
+    L.push("");
+
+    // ФОРМАТ ВИВОДУ
+    L.push("# ФОРМАТ ВИВОДУ");
+    L.push(this.bullets([
+      "Використовуй Markdown: заголовки `#`/`##`, марковані й нумеровані списки, таблиці там, де це доречно.",
+      "Програмний код — у блоках коду з указанням мови.",
+      "Починай відповідь одразу з матеріалу, без загальних вступів."
+    ]));
+    L.push("");
+
+    // GUARDRAILS
+    L.push("# ОБМЕЖЕННЯ (GUARDRAILS)");
+    L.push(this.bullets(D.guardrails));
+
+    return L.join("\n");
+  }
+};
+function buildUniversalPrompt(state){return PromptEngine.build(state);}
+
+/* ============ UI ============ */
+const $ = id => document.getElementById(id);
+const els = {topic:$("topic"),grade:$("grade"),env:$("env"),ltype:$("ltype"),fw:$("fw"),out:$("out"),status:$("status"),
+  pct:$("pct"),bar:$("bar"),badge:$("badge"),dot:$("dot"),fwHint:$("fwHint"),topicErr:$("topicErr")};
+const FW_DEFAULT_HINT = els.fwHint.textContent;
+
+function fillSelect(sel, map, getLabel){
+  sel.innerHTML = '<option value="">— оберіть —</option>' +
+    Object.keys(map).map(k=>`<option value="${k}">${getLabel(map[k])}</option>`).join("");
+}
+fillSelect(els.grade, PROMPT_DICTIONARY.grades, v=>v.label);
+fillSelect(els.env, PROMPT_DICTIONARY.envs, v=>v.label);
+fillSelect(els.ltype, PROMPT_DICTIONARY.lessonTypes, v=>v);
+fillSelect(els.fw, PROMPT_DICTIONARY.frameworks, v=>v.label);
+
+function renderChoices(box, name, map, type, cls){
+  box.innerHTML = Object.keys(map).map(k=>{
+    const label = map[k].label || map[k];
+    return `<label class="choice ${cls||""}"><input type="${type}" name="${name}" value="${k}"><span>${label}</span></label>`;
+  }).join("");
+}
+renderChoices($("formatBox"),"format",PROMPT_DICTIONARY.formats,"radio");
+renderChoices($("modulesBox"),"modules",PROMPT_DICTIONARY.modules,"checkbox","cb");
+renderChoices($("outputsBox"),"outputs",PROMPT_DICTIONARY.outputs,"checkbox","cb");
+
+function getState(){
+  const checked = n => [...document.querySelectorAll(`input[name="${n}"]:checked`)].map(i=>i.value);
+  return {
+    topic: els.topic.value, grade: els.grade.value, env: els.env.value,
+    format: (checked("format")[0]||""), ltype: els.ltype.value, fw: els.fw.value,
+    modules: checked("modules"), outputs: checked("outputs")
+  };
+}
+
+function updateProgress(){
+  const s = getState();
+  let score = 0;
+  if(s.topic.trim()) score += 20;
+  ["grade","env","format","ltype","fw"].forEach(k=>{ if(s[k]) score += 8; });
+  score += Math.min(s.modules.length,3)/3*20;
+  score += Math.min(s.outputs.length,2)/2*20;
+  const p = Math.round(score);
+  els.pct.textContent = p + "%";
+  els.bar.style.width = p + "%";
+}
+
+function setStatus(msg, cls){ els.status.textContent = msg; els.status.className = "status " + (cls||""); }
+
+function updateBadge(){
+  const t = els.out.value;
+  const words = t.trim() ? t.trim().split(/\s+/).length : 0;
+  els.badge.textContent = t.length
+    ? `Довжина промту: ${t.length} символів | ${words} слів | Готово для ChatGPT / Claude / Gemini`
+    : "Довжина промту: 0 символів | 0 слів";
+  els.dot.classList.toggle("on", t.length>0);
+}
+
+function validate(){
+  const ok = els.topic.value.trim().length > 0;
+  els.topic.classList.remove("invalid");
+  els.topicErr.classList.remove("show");
+  if(!ok){
+    void els.topic.offsetWidth; // перезапуск анімації
+    els.topic.classList.add("invalid");
+    els.topicErr.classList.add("show");
+    els.topic.focus();
+  }
+  return ok;
+}
+
+function tips(){
+  const s = getState(), miss = [];
+  if(!s.grade) miss.push("клас");
+  if(!s.env) miss.push("середовище");
+  if(!s.format) miss.push("формат проведення");
+  if(!s.ltype) miss.push("тип уроку");
+  if(!s.fw) miss.push("педагогічний фреймворк");
+  if(!s.modules.length) miss.push("модулі уроку");
+  if(!s.outputs.length) miss.push("цільовий результат");
+  return miss;
+}
+
+function checkParams(){
+  if(!validate()){ setStatus("⚠ Вкажіть тему уроку — це обов'язкове поле.", "warn"); return false; }
+  const miss = tips();
+  if(miss.length) setStatus("Тему вказано. Для точнішого промту додайте: " + miss.join(", ") + ".", "warn");
+  else setStatus("✓ Усі параметри заповнено — промт буде максимально детальним.", "good");
+  return true;
+}
+
+function generate(){
+  if(!validate()){ setStatus("⚠ Вкажіть тему уроку, щоб згенерувати промт.", "warn"); return; }
+  els.out.value = buildUniversalPrompt(getState());
+  updateBadge();
+  const miss = tips();
+  setStatus(miss.length ? "Промт готово. Його можна зробити точнішим: додайте " + miss.join(", ") + "." : "✓ Промт згенеровано. Відредагуйте за потреби й скопіюйте.", miss.length ? "warn" : "good");
+  if(window.innerWidth <= 980) els.out.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function reset(){
+  els.topic.value = ""; els.grade.value = ""; els.env.value = ""; els.ltype.value = ""; els.fw.value = "";
+  document.querySelectorAll("#builder input[type=radio], #builder input[type=checkbox]").forEach(i=>i.checked=false);
+  els.out.value = ""; els.fwHint.textContent = FW_DEFAULT_HINT;
+  els.topic.classList.remove("invalid"); els.topicErr.classList.remove("show");
+  updateBadge(); updateProgress(); setStatus("Параметри скинуто до початкового стану.");
+}
+
+async function copyPrompt(){
+  const text = els.out.value;
+  if(!text.trim()){ setStatus("Спершу згенеруйте промт.", "warn"); return; }
+  let ok = false;
+  try{ await navigator.clipboard.writeText(text); ok = true; }
+  catch(_){
+    els.out.select();
+    try{ ok = document.execCommand("copy"); }catch(__){}
+    window.getSelection().removeAllRanges();
+  }
+  if(!ok){ setStatus("Не вдалося скопіювати автоматично — виділіть текст і натисніть Ctrl+C.", "warn"); return; }
+  const btn = $("copyBtn"), txt = $("copyTxt");
+  btn.classList.add("ok"); txt.textContent = "Скопійовано в буфер! ✓";
+  clearTimeout(copyPrompt.t);
+  copyPrompt.t = setTimeout(()=>{ btn.classList.remove("ok"); txt.textContent = "Скопіювати промт"; }, 2500);
+}
+
+function savePrompt(){
+  const text = els.out.value;
+  if(!text.trim()){ setStatus("Спершу згенеруйте промт.", "warn"); return; }
+  const slug = (els.topic.value.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu,"_").replace(/^_+|_+$/g,"").slice(0,60)) || "lesson";
+  const blob = new Blob(["\uFEFF"+text], {type:"text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = `prompt_${slug}.txt`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+  setStatus(`Файл prompt_${slug}.txt збережено.`, "good");
+}
+
+/* ============ ПОДІЇ ============ */
+$("genBtn").addEventListener("click", generate);
+$("checkBtn").addEventListener("click", checkParams);
+$("resetBtn").addEventListener("click", reset);
+$("copyBtn").addEventListener("click", copyPrompt);
+$("saveBtn").addEventListener("click", savePrompt);
+$("exBtn").addEventListener("click", ()=>{
+  els.topic.value = PROMPT_DICTIONARY.example;
+  els.topic.classList.remove("invalid"); els.topicErr.classList.remove("show");
+  updateProgress();
+});
+els.topic.addEventListener("input", ()=>{
+  if(els.topic.value.trim()){ els.topic.classList.remove("invalid"); els.topicErr.classList.remove("show"); }
+  updateProgress();
+});
+els.topic.addEventListener("keydown", e=>{ if(e.key==="Enter") generate(); });
+els.fw.addEventListener("change", ()=>{
+  const f = PROMPT_DICTIONARY.frameworks[els.fw.value];
+  els.fwHint.textContent = f ? f.hint : FW_DEFAULT_HINT;
+});
+document.getElementById("builder").addEventListener("change", updateProgress);
+els.out.addEventListener("input", updateBadge);
+
+updateProgress(); updateBadge();
+</script>
+</body>
+</html>
